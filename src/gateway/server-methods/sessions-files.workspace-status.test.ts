@@ -53,6 +53,11 @@ vi.mock("../session-transcript-readers.js", async () => {
   };
 });
 
+vi.mock("./session-touched-files-worker-runtime.js", async () => {
+  const { loadSessionTouchedFilesInline } = await import("./session-touched-files.js");
+  return { loadSessionTouchedFilesInWorker: loadSessionTouchedFilesInline };
+});
+
 const invokeSessionFilesHandler = createSessionFilesHandlerInvoker(sessionsFilesHandlers);
 const mockVisibleMessages = createVisibleMessagesMock(
   hoisted.readSessionTranscriptVisibleMessageDeltaCore,
@@ -133,6 +138,41 @@ describe("sessions.workspace.status RPC handler", () => {
     hoisted.runGit.mockResolvedValueOnce({ code: 1, stderr: "not a checkout", stdout: "" });
     const freshPayload = expectOkPayload(
       await invokeSessionFilesHandler("sessions.workspace.status", {
+        sessionKey: "agent:main:main",
+      }),
+    );
+    expect(freshPayload.gitCheckout).toBe(false);
+    expect(hoisted.runGit).toHaveBeenCalledTimes(2);
+  });
+
+  it("coalesces checkout probes for the active sessions.files.list handler", async () => {
+    let finishProbe: (result: { code: number; stderr: string; stdout: string }) => void = () => {};
+    hoisted.runGit.mockImplementationOnce(
+      async () =>
+        await new Promise((resolve) => {
+          finishProbe = resolve;
+        }),
+    );
+
+    const first = invokeSessionFilesHandler("sessions.files.list", {
+      sessionKey: "agent:main:main",
+    });
+    const second = invokeSessionFilesHandler("sessions.files.list", {
+      sessionKey: "agent:main:main",
+    });
+    await vi.waitFor(() => expect(hoisted.runGit).toHaveBeenCalledOnce());
+
+    finishProbe({ code: 0, stderr: "", stdout: `${workspaceRoot}\n` });
+    const [firstPayload, secondPayload] = await Promise.all([
+      first.then(expectOkPayload),
+      second.then(expectOkPayload),
+    ]);
+    expect(firstPayload.gitCheckout).toBe(true);
+    expect(secondPayload.gitCheckout).toBe(true);
+
+    hoisted.runGit.mockResolvedValueOnce({ code: 1, stderr: "not a checkout", stdout: "" });
+    const freshPayload = expectOkPayload(
+      await invokeSessionFilesHandler("sessions.files.list", {
         sessionKey: "agent:main:main",
       }),
     );
