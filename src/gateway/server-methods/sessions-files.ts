@@ -26,6 +26,7 @@ import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { FsSafeError } from "../../infra/fs-safe.js";
 import { isPathInside } from "../../infra/path-guards.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
+import { getOrCreatePromise } from "../../shared/lazy-promise.js";
 import { resolveRequestedSessionAgentId } from "../session-request-agent.js";
 import {
   resolveTranscriptReadTarget,
@@ -75,8 +76,6 @@ const MAX_PREVIEW_BYTES = WORKSPACE_PREVIEW_MAX_BYTES;
 const MAX_BROWSER_ENTRIES = 250;
 const MAX_SEARCH_ENTRIES = 500;
 const MAX_SEARCH_VISITED_ENTRIES = 5_000;
-// Share only overlapping Git probes for one workspace. Each entry is removed when
-// its promise settles so a later request observes the current checkout state.
 const gitCheckoutStatusProbes = new Map<string, Promise<boolean>>();
 // Matches file-type's documented default buffer sample while keeping metadata
 // classification independent from the 256 KiB inline-content cap.
@@ -560,27 +559,19 @@ async function loadGitCheckoutStatus(diffCwd: string | undefined): Promise<boole
     return undefined;
   }
   const cacheKey = path.resolve(diffCwd);
-  const activeProbe = gitCheckoutStatusProbes.get(cacheKey);
-  if (activeProbe) {
-    return await activeProbe;
-  }
-
-  const promise = (async () => {
-    try {
-      const result = await runGit(cacheKey, ["rev-parse", "--show-toplevel"]);
-      return result.code === 0 && Boolean(result.stdout.trim());
-    } catch {
-      return false;
-    }
-  })();
-  gitCheckoutStatusProbes.set(cacheKey, promise);
-  try {
-    return await promise;
-  } finally {
-    if (gitCheckoutStatusProbes.get(cacheKey) === promise) {
-      gitCheckoutStatusProbes.delete(cacheKey);
-    }
-  }
+  return await getOrCreatePromise(
+    gitCheckoutStatusProbes,
+    cacheKey,
+    async () => {
+      try {
+        const result = await runGit(cacheKey, ["rev-parse", "--show-toplevel"]);
+        return result.code === 0 && Boolean(result.stdout.trim());
+      } catch {
+        return false;
+      }
+    },
+    { evictOnSettled: true },
+  );
 }
 
 async function buildWorkspaceStatus(params: {
