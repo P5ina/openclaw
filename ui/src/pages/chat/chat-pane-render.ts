@@ -129,6 +129,7 @@ export class ChatPane extends ChatPaneBrowserAnnotationRender {
     });
     const hasPanelSlot = (slot: SidebarSlotId) =>
       sidebarLayout.columns[0]?.panels.some((panel) => panel.slot === slot) === true;
+    const workspaceVisible = isSidebarSlotVisible(sidebarLayout, "workspace");
     const progressCardInRail =
       this.paneWidth >= SIDEBAR_NARROW_BREAKPOINT_PX &&
       isSidebarSlotVisible(sidebarLayout, "companion");
@@ -240,12 +241,12 @@ export class ChatPane extends ChatPaneBrowserAnnotationRender {
         : null;
     const sessionWorkspaceBase = createSessionWorkspaceProps(state, {
       draftScope: this.presentationId,
-      expanded: hasPanelSlot("workspace"),
+      expanded: workspaceVisible,
       narrowLayout: false,
     });
     const sessionWorkspace = {
       ...sessionWorkspaceBase,
-      collapsed: !hasPanelSlot("workspace"),
+      collapsed: !workspaceVisible,
       narrowLayout: false,
       onToggleCollapsed: () => togglePanelSlot("workspace"),
       onToggleTerminal: state.terminalAvailable ? () => togglePanelSlot("terminal") : undefined,

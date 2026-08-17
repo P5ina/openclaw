@@ -100,6 +100,7 @@ export type TestChatPane = HTMLElement & {
   updateComplete: Promise<boolean>;
   requestUpdate: () => void;
   performUpdate: () => void;
+  render: () => TemplateResult;
   deferSessionHydrationUntilTranscript: (
     sessionKey: string,
     transcriptLoad: Promise<unknown>,
@@ -187,6 +188,7 @@ export function createSessionContext(
     (snapshot: ApplicationContext["gateway"]["snapshot"]) => void
   >();
   return {
+    basePath: "",
     gateway: {
       snapshot: {
         client,
@@ -235,9 +237,22 @@ export function createSessionContext(
     config: {
       current: {
         assistantIdentity: { name: "Molty" },
+        localMediaPreviewRoots: [],
+        embedSandboxMode: "strict",
+        allowExternalEmbedUrls: false,
         terminalEnabled: false,
       },
     },
+    runtimeConfig: {
+      state: { configNeedsApply: false, configSnapshot: null },
+      subscribe: () => () => undefined,
+    },
+    cloudStartup: {
+      get: () => null,
+      retry: () => undefined,
+      subscribe: () => () => undefined,
+    },
+    navigate: () => undefined,
     initialUserMessage: createInitialUserMessageHandoff(),
     chatAttachmentHandoff: createChatAttachmentHandoff(),
     nativeChatDrafts: { subscribe: () => () => undefined },
