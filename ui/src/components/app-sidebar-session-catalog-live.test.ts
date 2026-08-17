@@ -18,6 +18,11 @@ describe("SessionCatalogLiveState presence refreshes", () => {
         presence: [{ deviceId: "operator-client", mode: "node", roles: ["operator"] }],
       }),
     ).toBe(false);
+    expect(
+      live.observePresence({
+        presence: [{ deviceId: "malformed-client", mode: "node", roles: [7, null] }],
+      }),
+    ).toBe(false);
   });
 
   it("invalidates when explicit node presence changes", () => {

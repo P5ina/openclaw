@@ -310,12 +310,12 @@ export class SessionCatalogLiveState {
       const rawId = typeof record.deviceId === "string" ? record.deviceId : record.instanceId;
       const id = typeof rawId === "string" ? rawId.trim().toLowerCase() : "";
       const mode = typeof record.mode === "string" ? record.mode.trim().toLowerCase() : "";
-      const hasAuthenticatedRoles = Array.isArray(record.roles);
+      const authenticatedRoles = Array.isArray(record.roles)
+        ? record.roles.filter((role: unknown): role is string => typeof role === "string")
+        : null;
+      const hasAuthenticatedRoles = authenticatedRoles !== null;
       const hasNodeRole =
-        hasAuthenticatedRoles &&
-        record.roles.some(
-          (role) => typeof role === "string" && role.trim().toLowerCase() === "node",
-        );
+        authenticatedRoles?.some((role) => role.trim().toLowerCase() === "node") === true;
       // Catalog hosts are native node connections. Browser/operator presence changes on
       // every tab connect, disconnect, and watched-session update, but cannot change the
       // native host inventory and must not trigger another full catalog scan. Older nodes
