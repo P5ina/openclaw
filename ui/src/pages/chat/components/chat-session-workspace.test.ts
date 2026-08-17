@@ -4,6 +4,7 @@ import {
   createSessionWorkspaceProps,
   openSessionWorkspaceFile,
   refreshSessionWorkspace,
+  revealSessionWorkspaceFile,
   renderSessionWorkspaceRail,
   type SessionWorkspaceHost,
 } from "./chat-session-workspace.ts";
@@ -176,6 +177,47 @@ describe("session workspace state", () => {
     );
     expect(listFiles).not.toHaveBeenCalled();
     expect(request.mock.calls.filter(([method]) => method === "artifacts.list")).toHaveLength(0);
+  });
+  it("keeps a revealed workspace off files and artifacts after Terminal becomes active", async () => {
+    const listFiles = vi.fn().mockResolvedValue({
+      sessionKey: "agent:main:current",
+      gitCheckout: true,
+      files: [],
+    });
+    const request = vi.fn((method: string) =>
+      Promise.resolve(
+        method === "artifacts.list"
+          ? { artifacts: [] }
+          : { sessionKey: "agent:main:current", gitCheckout: true },
+      ),
+    );
+    const state = {
+      agentsList: { agents: [{ id: "main" }], defaultId: "main" },
+      client: { request },
+      connected: true,
+      handleOpenSidebar: vi.fn(),
+      hello: gatewayHello(["sessions.workspace.status"]),
+      requestUpdate: vi.fn(),
+      sessionKey: "agent:main:current",
+      sessions: { listFiles },
+    } as unknown as SessionWorkspaceHost;
+
+    revealSessionWorkspaceFile(state, "src/index.ts");
+    await vi.waitFor(() => expect(listFiles).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(request.mock.calls.filter(([method]) => method === "artifacts.list")).toHaveLength(1),
+    );
+
+    listFiles.mockClear();
+    request.mockClear();
+    const props = createSessionWorkspaceProps(state, { expanded: false });
+
+    expect(props.collapsed).toBe(true);
+    expect(listFiles).not.toHaveBeenCalled();
+    expect(request.mock.calls.filter(([method]) => method === "artifacts.list")).toHaveLength(0);
+    expect(
+      request.mock.calls.filter(([method]) => method === "sessions.workspace.status"),
+    ).toHaveLength(0);
   });
   it("does not let an older collapsed status overwrite an expanded workspace result", async () => {
     let finishStatus: (value: { gitCheckout: boolean; sessionKey: string }) => void = () => {};

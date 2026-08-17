@@ -774,8 +774,9 @@ export function createSessionWorkspaceProps(
 ): SessionWorkspaceProps {
   state.sessionWorkspaceDraftScope = options?.draftScope;
   const workspace = getWorkspaceState(state);
+  const expanded = options?.expanded ?? !workspace.collapsed;
   if (
-    (options?.expanded === true || !workspace.collapsed) &&
+    expanded &&
     state.connected &&
     state.agentsList &&
     !workspace.loading &&
@@ -784,7 +785,7 @@ export function createSessionWorkspaceProps(
   ) {
     loadWorkspace(state, workspace);
   } else if (
-    workspace.collapsed &&
+    !expanded &&
     state.connected &&
     state.agentsList &&
     !workspace.statusLoading &&
@@ -794,7 +795,7 @@ export function createSessionWorkspaceProps(
   }
   const diffContent = resolveSessionDiffSidebarContent(state);
   return {
-    collapsed: options?.expanded === true ? false : workspace.collapsed,
+    collapsed: !expanded,
     sessionKey: state.sessionKey,
     list: workspace.list?.sessionKey === state.sessionKey ? workspace.list : null,
     loading: workspace.loading,
