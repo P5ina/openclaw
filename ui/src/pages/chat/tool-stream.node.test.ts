@@ -237,7 +237,7 @@ describe("app-tool-stream throttled projections", () => {
 });
 
 describe("app-tool-stream result blocks", () => {
-  it("attaches parallel reviews without removing uncorrelated vendor warnings", () => {
+  it("attaches parallel reviews without removing ambiguous vendor warnings", () => {
     const host = createHost();
     const toolCallId = "call-reviewed";
     const parallelToolCallId = "call-reviewed-parallel";
@@ -272,14 +272,22 @@ describe("app-tool-stream result blocks", () => {
       agentEvent("run-1", 4, "codex_app_server.guardian", {
         phase: "warning",
         message:
+          "Automatic approval review approved (risk: low, authorization: high): First safe command.",
+      }),
+    );
+    handleAgentEvent(
+      host,
+      agentEvent("run-1", 5, "codex_app_server.guardian", {
+        phase: "warning",
+        message:
           "Automatic approval review approved (risk: low, authorization: high): Second safe command.",
       }),
     );
-    expect(host.guardianNotices).toHaveLength(2);
+    expect(host.guardianNotices).toHaveLength(3);
 
     handleAgentEvent(
       host,
-      agentEvent("run-1", 5, "tool", {
+      agentEvent("run-1", 6, "tool", {
         phase: "review",
         toolCallId,
         guardianWarningMessage:
@@ -295,11 +303,13 @@ describe("app-tool-stream result blocks", () => {
       }),
     );
     expect(host.guardianNotices?.map((notice) => notice.message)).toEqual([
+      "Automatic approval review approved (risk: low, authorization: high): First safe command.",
+      "Automatic approval review approved (risk: low, authorization: high): First safe command.",
       "Automatic approval review approved (risk: low, authorization: high): Second safe command.",
     ]);
     handleAgentEvent(
       host,
-      agentEvent("run-1", 6, "tool", {
+      agentEvent("run-1", 7, "tool", {
         phase: "review",
         toolCallId: parallelToolCallId,
         guardianWarningMessage:
@@ -315,7 +325,10 @@ describe("app-tool-stream result blocks", () => {
       }),
     );
 
-    expect(host.guardianNotices).toEqual([]);
+    expect(host.guardianNotices?.map((notice) => notice.message)).toEqual([
+      "Automatic approval review approved (risk: low, authorization: high): First safe command.",
+      "Automatic approval review approved (risk: low, authorization: high): First safe command.",
+    ]);
     expect(host.toolStreamById.get(buildToolStreamIdentity("run-1", toolCallId))?.details).toEqual({
       approvalReviews: [
         {
@@ -342,7 +355,7 @@ describe("app-tool-stream result blocks", () => {
 
     handleAgentEvent(
       host,
-      agentEvent("run-1", 7, "tool", {
+      agentEvent("run-1", 8, "tool", {
         phase: "result",
         name: "exec",
         toolCallId,
