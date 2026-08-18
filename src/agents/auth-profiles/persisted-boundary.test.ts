@@ -16,6 +16,7 @@ import {
   mergeAuthProfileStores,
 } from "./persisted.js";
 import { getRuntimeExternalCliProfileIds } from "./runtime-external-profile-references.js";
+import { coerceAuthProfileState } from "./state.js";
 import type { AuthProfileStore, RuntimeAuthProfileStore } from "./types.js";
 import { isSameAuthProfileRequestGeneration } from "./usage-state.js";
 
@@ -144,30 +145,32 @@ describe("persisted auth profile boundary", () => {
 
   it("treats a generation discarded by an older reader as legacy generation zero", () => {
     const profileId = "fixture:default";
-    const stored = coercePersistedAuthProfileStore({
-      version: AUTH_STORE_VERSION,
-      profiles: {
-        [profileId]: { type: "api_key", provider: "fixture", key: "same-key" },
-      },
+    const profile = { type: "api_key", provider: "fixture", key: "same-key" } as const;
+    const storedState = coerceAuthProfileState({
       usageStats: {
         [profileId]: { credentialGeneration: 7, errorCount: 0 },
       },
     });
-    assert(stored);
-    expect(stored.usageStats?.[profileId]?.credentialGeneration).toBe(7);
+    expect(storedState.usageStats?.[profileId]?.credentialGeneration).toBe(7);
 
-    const oldReaderStats = { ...stored.usageStats?.[profileId] };
+    const oldReaderStats = { ...storedState.usageStats?.[profileId] };
     delete oldReaderStats.credentialGeneration;
-    const projected = coercePersistedAuthProfileStore({
-      ...stored,
+    const projectedState = coerceAuthProfileState({
       usageStats: { [profileId]: oldReaderStats },
     });
-    const explicitLegacyZero = coercePersistedAuthProfileStore({
-      ...projected,
+    const explicitLegacyZeroState = coerceAuthProfileState({
       usageStats: { [profileId]: { ...oldReaderStats, credentialGeneration: 0 } },
     });
-    assert(projected);
-    assert(explicitLegacyZero);
+    const projected: AuthProfileStore = {
+      version: AUTH_STORE_VERSION,
+      profiles: { [profileId]: profile },
+      ...projectedState,
+    };
+    const explicitLegacyZero: AuthProfileStore = {
+      version: AUTH_STORE_VERSION,
+      profiles: { [profileId]: profile },
+      ...explicitLegacyZeroState,
+    };
 
     expect(projected.usageStats?.[profileId]?.credentialGeneration).toBeUndefined();
     expect(isSameAuthProfileRequestGeneration(projected, explicitLegacyZero, profileId)).toBe(true);
