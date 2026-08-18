@@ -79,7 +79,7 @@ type ListSessionsFromStoreParams = {
 
 type SessionEntrySelection = {
   entries: SessionEntryPair[];
-  creators: Array<{ id: string; label?: string; avatarUrl?: string }>;
+  owners: Array<{ id: string; label?: string; avatarUrl?: string }>;
   totalCount: number;
   limitApplied?: number;
   offset: number;
@@ -87,7 +87,7 @@ type SessionEntrySelection = {
   hasMore: boolean;
 };
 
-function preferredCreatorIdentityValue(
+function preferredOwnerIdentityValue(
   current: string | undefined,
   candidate: string | undefined,
 ): string | undefined {
@@ -97,8 +97,8 @@ function preferredCreatorIdentityValue(
   return candidate < current ? candidate : current;
 }
 
-function addSessionCreatorIdentity(
-  creators: Map<string, { id: string; label?: string; avatarUrl?: string }>,
+function addSessionOwnerIdentity(
+  owners: Map<string, { id: string; label?: string; avatarUrl?: string }>,
   entry: SessionEntry,
   userProfileIdentityById: Map<string, SessionActorProfileIdentity | undefined>,
   cfg: OpenClawConfig,
@@ -114,11 +114,11 @@ function addSessionCreatorIdentity(
   }
   const label = normalizeOptionalString(actor?.label);
   const avatarUrl = normalizeOptionalString(actor?.avatarUrl);
-  const existing = creators.get(id);
-  const preferredLabel = preferredCreatorIdentityValue(existing?.label, label);
-  const preferredAvatarUrl = preferredCreatorIdentityValue(existing?.avatarUrl, avatarUrl);
+  const existing = owners.get(id);
+  const preferredLabel = preferredOwnerIdentityValue(existing?.label, label);
+  const preferredAvatarUrl = preferredOwnerIdentityValue(existing?.avatarUrl, avatarUrl);
   if (!existing || preferredLabel !== existing.label || preferredAvatarUrl !== existing.avatarUrl) {
-    creators.set(id, {
+    owners.set(id, {
       id,
       ...(preferredLabel ? { label: preferredLabel } : {}),
       ...(preferredAvatarUrl ? { avatarUrl: preferredAvatarUrl } : {}),
@@ -126,10 +126,10 @@ function addSessionCreatorIdentity(
   }
 }
 
-function sortSessionCreatorIdentities(
-  creators: Map<string, { id: string; label?: string; avatarUrl?: string }>,
+function sortSessionOwnerIdentities(
+  owners: Map<string, { id: string; label?: string; avatarUrl?: string }>,
 ): Array<{ id: string; label?: string; avatarUrl?: string }> {
-  return [...creators.values()].toSorted((a, b) => {
+  return [...owners.values()].toSorted((a, b) => {
     const byLabel = (a.label ?? a.id).localeCompare(b.label ?? b.id);
     return byLabel || a.id.localeCompare(b.id);
   });
@@ -199,7 +199,7 @@ function filterSessionEntries(params: {
   getRowContext?: SessionListRowContextProvider;
   entryFilter?: (key: string, entry: SessionEntry) => boolean;
   involvingActorId?: string;
-}): Pick<SessionEntrySelection, "creators" | "entries"> {
+}): Pick<SessionEntrySelection, "owners" | "entries"> {
   const { cfg, store, opts, now } = params;
   const includeGlobal = opts.includeGlobal === true;
   const includeUnknown = opts.includeUnknown === true;
@@ -212,11 +212,11 @@ function filterSessionEntries(params: {
     typeof opts.activeMinutes === "number" && Number.isFinite(opts.activeMinutes)
       ? Math.max(1, Math.floor(opts.activeMinutes))
       : undefined;
-  const creatorId = normalizeOptionalString(opts.creatorId);
+  const ownerId = normalizeOptionalString(opts.ownerId);
   const involvingActorId = normalizeOptionalString(params.involvingActorId);
   const activeCutoff = activeMinutes === undefined ? undefined : now - activeMinutes * 60_000;
   const entries: SessionEntryPair[] = [];
-  const creators = new Map<string, { id: string; label?: string; avatarUrl?: string }>();
+  const owners = new Map<string, { id: string; label?: string; avatarUrl?: string }>();
 
   for (const [key, entry] of Object.entries(store)) {
     if (params.entryFilter && !params.entryFilter(key, entry)) {
@@ -321,9 +321,9 @@ function filterSessionEntries(params: {
       continue;
     }
     if (params.userProfileIdentityById) {
-      addSessionCreatorIdentity(creators, entry, params.userProfileIdentityById, cfg);
+      addSessionOwnerIdentity(owners, entry, params.userProfileIdentityById, cfg);
     }
-    if (creatorId && (entry.owner?.actor ?? entry.createdActor)?.id !== creatorId) {
+    if (ownerId && (entry.owner?.actor ?? entry.createdActor)?.id !== ownerId) {
       continue;
     }
     if (involvingActorId) {
@@ -344,7 +344,7 @@ function filterSessionEntries(params: {
     entries.push([key, entry]);
   }
 
-  return { entries, creators: sortSessionCreatorIdentities(creators) };
+  return { entries, owners: sortSessionOwnerIdentities(owners) };
 }
 
 function isPhantomAgentStoreListEntry(key: string, entry: SessionEntry | undefined): boolean {
@@ -367,7 +367,7 @@ function selectSessionEntries(params: {
   entryFilter?: (key: string, entry: SessionEntry) => boolean;
   involvingActorId?: string;
 }): SessionEntrySelection {
-  const { creators, entries: filtered } = filterSessionEntries(params);
+  const { owners, entries: filtered } = filterSessionEntries(params);
   const limit = resolveSessionsListLimit(params.opts, params.defaultLimit);
   const offset = resolveSessionsListOffset(params.opts);
   const windowLimit = resolveSessionsListWindowLimit(limit, offset);
@@ -378,7 +378,7 @@ function selectSessionEntries(params: {
   const hasMore = nextOffset < filtered.length;
   return {
     entries,
-    creators,
+    owners,
     totalCount: filtered.length,
     limitApplied: limit,
     offset,
@@ -476,7 +476,7 @@ function buildSessionsListResult(params: {
     offset: list.offset > 0 ? list.offset : undefined,
     nextOffset: list.nextOffset,
     hasMore: list.hasMore,
-    creators: list.creators,
+    owners: list.owners,
     defaults: getSessionDefaults(params.cfg, params.modelCatalog, {
       ...(params.agentId ? { agentId: params.agentId } : {}),
       allowPluginNormalization: false,

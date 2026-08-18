@@ -178,7 +178,7 @@ describe("AppSidebar session mutation feedback", () => {
       throw new Error("expected session owner fixture");
     }
     row.createdActor = { type: "human", id: "profile-ada", label: "Ada" };
-    result.creators = [
+    result.owners = [
       { id: "profile-ada", label: "Ada" },
       { id: "profile-bob", label: "Bob" },
     ];

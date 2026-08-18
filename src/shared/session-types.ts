@@ -66,7 +66,7 @@ export type SessionsListResultBase<TDefaults, TRow> = {
   nextOffset?: number | null;
   hasMore?: boolean;
   /** Complete owner facet for the filtered result, independent of pagination. */
-  creators?: Array<{ id: string; label?: string; avatarUrl?: string }>;
+  owners?: Array<{ id: string; label?: string; avatarUrl?: string }>;
   defaults: TDefaults;
   sessions: TRow[];
 };

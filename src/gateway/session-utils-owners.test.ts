@@ -47,7 +47,7 @@ afterEach(() => {
   getUserProfileDisplay.mockClear();
 });
 
-it("keeps creator labels and avatars stable across actor order", () => {
+it("keeps owner labels and avatars stable across actor order", () => {
   const actorOrders = [
     ["human", "agent"],
     ["agent", "human"],
@@ -65,16 +65,16 @@ it("keeps creator labels and avatars stable across actor order", () => {
     );
     const result = listSessionsFromStore({
       cfg: {} as OpenClawConfig,
-      storePath: "/tmp/openclaw-session-creator-order",
+      storePath: "/tmp/openclaw-session-owner-order",
       store,
       opts: { archived: "all" },
     });
 
-    expect(result.creators).toEqual([{ id: "shared-id", label: "Alpha", avatarUrl: "/avatar" }]);
+    expect(result.owners).toEqual([{ id: "shared-id", label: "Alpha", avatarUrl: "/avatar" }]);
   }
 });
 
-it("breaks locale-equivalent creator label ties deterministically", () => {
+it("breaks locale-equivalent owner label ties deterministically", () => {
   for (const actorOrder of [
     ["human", "agent"],
     ["agent", "human"],
@@ -91,16 +91,16 @@ it("breaks locale-equivalent creator label ties deterministically", () => {
     );
     const result = listSessionsFromStore({
       cfg: {} as OpenClawConfig,
-      storePath: "/tmp/openclaw-session-creator-unicode-order",
+      storePath: "/tmp/openclaw-session-owner-unicode-order",
       store,
       opts: { archived: "all" },
     });
 
-    expect(result.creators).toEqual([{ id: "unicode-id", label: "e\u0301" }]);
+    expect(result.owners).toEqual([{ id: "unicode-id", label: "e\u0301" }]);
   }
 });
 
-it("returns the complete deterministic creator facet independently of pagination", () => {
+it("returns the complete deterministic owner facet independently of pagination", () => {
   const store: Record<string, SessionEntry> = {
     "agent:main:ada": {
       archivedAt: 3,
@@ -118,14 +118,14 @@ it("returns the complete deterministic creator facet independently of pagination
 
   const result = listSessionsFromStore({
     cfg: {} as OpenClawConfig,
-    storePath: "/tmp/openclaw-session-creators",
+    storePath: "/tmp/openclaw-session-owners",
     store,
     opts: { archived: "all", limit: 1 },
   });
 
   expect(result.count).toBe(1);
   expect(result.totalCount).toBe(2);
-  expect(result.creators).toEqual([
+  expect(result.owners).toEqual([
     {
       id: "profile-ada",
       label: "Ada",
@@ -148,12 +148,12 @@ it("returns the complete deterministic creator facet independently of pagination
 
   const filtered = listSessionsFromStore({
     cfg: {} as OpenClawConfig,
-    storePath: "/tmp/openclaw-session-creators",
+    storePath: "/tmp/openclaw-session-owners",
     store,
-    opts: { archived: "all", creatorId: "profile-bob", limit: 1 },
+    opts: { archived: "all", ownerId: "profile-bob", limit: 1 },
   });
   expect(filtered.sessions.map((row) => row.key)).toEqual(["agent:main:bob"]);
-  expect(filtered.creators).toEqual(result.creators);
+  expect(filtered.owners).toEqual(result.owners);
 });
 
 it("projects and filters the effective owner while preserving creator provenance", () => {
@@ -193,7 +193,7 @@ it("projects and filters the effective owner while preserving creator provenance
       assignedAt: 10,
     },
   });
-  expect(result.creators).toEqual([
+  expect(result.owners).toEqual([
     {
       id: "profile-ada",
       label: "Ada",
@@ -205,7 +205,7 @@ it("projects and filters the effective owner while preserving creator provenance
     cfg: {} as OpenClawConfig,
     storePath: "/tmp/openclaw-session-owners",
     store,
-    opts: { archived: "all", creatorId: "profile-bob" },
+    opts: { archived: "all", ownerId: "profile-bob" },
   });
   expect(filtered.sessions.map((row) => row.key)).toEqual(["agent:main:assigned-owner"]);
 });
@@ -291,7 +291,7 @@ it("projects participant identities and filters sessions involving the viewer", 
   });
 });
 
-it("preserves legacy list output across visibility, scope, creator, and search filters", async () => {
+it("preserves list output across visibility, scope, owner, and search filters", async () => {
   const now = 1_000_000;
   vi.spyOn(Date, "now").mockReturnValue(now);
   getUserProfileDisplay.mockImplementation((profileId: string) => ({
@@ -386,7 +386,7 @@ it("preserves legacy list output across visibility, scope, creator, and search f
     });
     return {
       count: result.count,
-      creators: result.creators,
+      owners: result.owners,
       hasMore: result.hasMore,
       keys: result.sessions.map((row) => row.key),
       nextOffset: result.nextOffset,
@@ -407,7 +407,7 @@ it("preserves legacy list output across visibility, scope, creator, and search f
   ).toBe(
     JSON.stringify({
       count: 5,
-      creators: [
+      owners: [
         { id: "profile-ada", label: "Ada" },
         { id: "profile-bob", label: "Bob" },
         { id: "system-import" },
@@ -423,7 +423,7 @@ it("preserves legacy list output across visibility, scope, creator, and search f
       await project({
         agentId: "main",
         archived: "all",
-        creatorId: "profile-bob",
+        ownerId: "profile-bob",
         includeGlobal: true,
         includeUnknown: true,
         search: "needle",
@@ -432,7 +432,7 @@ it("preserves legacy list output across visibility, scope, creator, and search f
   ).toBe(
     JSON.stringify({
       count: 2,
-      creators: [
+      owners: [
         { id: "profile-ada", label: "Ada" },
         { id: "profile-bob", label: "Bob" },
       ],
@@ -472,7 +472,7 @@ it("keeps the serialized list response deterministic for the current filter path
     storePath: "/tmp/openclaw-session-byte-parity",
   });
   const expectedSerializedResponse = [
-    '{"ts":1000000,"path":"/tmp/openclaw-session-byte-parity","count":1,"totalCount":1,"limitApplied":100,"nextOffset":null,"hasMore":false,"creators":[{"id":"creator-b"}]',
+    '{"ts":1000000,"path":"/tmp/openclaw-session-byte-parity","count":1,"totalCount":1,"limitApplied":100,"nextOffset":null,"hasMore":false,"owners":[{"id":"creator-b"}]',
     ',"defaults":{"modelProvider":"openai","model":"gpt-5.4","contextTokens":200000,"agentRuntime":{"id":"codex","cloudPlacementSupported":false,"source":"implicit"},"thinkingLevels":[{"id":"off","label":"off"},{"id":"minimal","label":"minimal"},{"id":"low","label":"low"},{"id":"medium","label":"medium"},{"id":"high","label":"high"},{"id":"xhigh","label":"xhigh"}],"thinkingOptions":["off","minimal","low","medium","high","xhigh"],"thinkingDefault":"off"}',
     ',"sessions":[{"key":"global","visibility":"shared","createdActor":{"type":"system","id":"creator-b"},"owner":{"actor":{"type":"system","id":"creator-b"}},"kind":"global","classification":"global","agentId":"main","isMain":false,"isBackground":false,"subject":"needle global","updatedAt":999999,"archived":false,"pinned":false,"unread":false,"sessionId":"session-global","thinkingLevels":[{"id":"off","label":"off"},{"id":"minimal","label":"minimal"},{"id":"low","label":"low"},{"id":"medium","label":"medium"},{"id":"high","label":"high"},{"id":"xhigh","label":"xhigh"}],"thinkingOptions":["off","minimal","low","medium","high","xhigh"],"thinkingDefault":"off","effectiveFastMode":false,"effectiveFastModeSource":"default","fastAutoOnSeconds":60,"totalTokens":1,"totalTokensFresh":true,"estimatedCostUsd":0,"effectiveResponseUsage":"off","effectiveQueueMode":"steer","modelProvider":"openai","model":"gpt-5.4","agentRuntime":{"id":"codex","source":"implicit"},"contextTokens":100}]}',
   ].join("");

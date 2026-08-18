@@ -64,10 +64,10 @@ function sortSidebarRows(
   rows: GatewaySessionRow[],
   sortMode: "created" | "updated" | "people",
   createdOrder: ReadonlyMap<string, number>,
-  creators?: Array<{ id: string; label: string }>,
+  owners?: Array<{ id: string; label: string }>,
 ) {
   return rows.toSorted((a, b) =>
-    compareSidebarSessionRowsByMode({ a, b, sortMode, createdOrder, creators }),
+    compareSidebarSessionRowsByMode({ a, b, sortMode, createdOrder, owners }),
   );
 }
 
@@ -76,13 +76,13 @@ describe("sidebar session sort modes", () => {
     key: string,
     createdAt?: number,
     updatedAt = 1,
-    creatorId?: string,
+    ownerId?: string,
   ): GatewaySessionRow => ({
     key,
     kind: "direct",
     updatedAt,
     createdAt,
-    createdActor: creatorId ? { type: "human", id: creatorId } : undefined,
+    createdActor: ownerId ? { type: "human", id: ownerId } : undefined,
   });
 
   it("sorts timestamped sessions newest-first ahead of legacy sessions", () => {
@@ -124,7 +124,7 @@ describe("sidebar session sort modes", () => {
     ]);
   });
 
-  it("keeps creator ordering primary and creation time secondary in People mode", () => {
+  it("keeps owner ordering primary and creation time secondary in People mode", () => {
     const rows = [
       row("alex-old", 100, 1, "alex"),
       row("sam-new", 300, 1, "sam"),

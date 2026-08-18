@@ -78,7 +78,7 @@ export function compareSidebarSessionRowsByMode(input: {
   a: SessionRow;
   b: SessionRow;
   sortMode: SidebarSessionSortMode;
-  creators: SessionsListResult["creators"];
+  owners: SessionsListResult["owners"];
   createdOrder: ReadonlyMap<string, number>;
 }): number {
   const { a, b } = input;
@@ -87,19 +87,19 @@ export function compareSidebarSessionRowsByMode(input: {
       ? compareSessionRowsByUpdatedAt(a, b)
       : compareSidebarSessionRowsByCreatedAt(a, b, input.createdOrder);
   }
-  const creators = input.creators ?? [];
+  const owners = input.owners ?? [];
   const ownerA = a.owner?.actor ?? a.createdActor;
   const ownerB = b.owner?.actor ?? b.createdActor;
   const idA = ownerA?.id?.trim() ?? "";
   const idB = ownerB?.id?.trim() ?? "";
   if (idA !== idB) {
-    const creatorA = creators.find((candidate) => candidate.id === idA);
-    const creatorB = creators.find((candidate) => candidate.id === idB);
-    const labelA = creatorA?.label?.trim() || ownerA?.label?.trim() || idA;
-    const labelB = creatorB?.label?.trim() || ownerB?.label?.trim() || idB;
-    const byCreator = labelA.localeCompare(labelB) || idA.localeCompare(idB);
-    if (byCreator !== 0) {
-      return byCreator;
+    const facetOwnerA = owners.find((candidate) => candidate.id === idA);
+    const facetOwnerB = owners.find((candidate) => candidate.id === idB);
+    const labelA = facetOwnerA?.label?.trim() || ownerA?.label?.trim() || idA;
+    const labelB = facetOwnerB?.label?.trim() || ownerB?.label?.trim() || idB;
+    const byOwner = labelA.localeCompare(labelB) || idA.localeCompare(idB);
+    if (byOwner !== 0) {
+      return byOwner;
     }
   }
   return compareSidebarSessionRowsByCreatedAt(a, b, input.createdOrder);
@@ -313,7 +313,7 @@ export function partitionSidebarVisibleSections(input: {
   catalogIds?: readonly string[];
   sectionOrder?: readonly string[];
   collapsedSections: ReadonlySet<string>;
-  hideEmptyCreatorFilteredGroup: (category: string | undefined, rowCount: number) => boolean;
+  hideEmptyOwnerFilteredGroup: (category: string | undefined, rowCount: number) => boolean;
   visibleSessionLimits: ReadonlyMap<string, number>;
 }): SidebarVisibleSections {
   const isCollapsed = (sectionId: string) =>
@@ -326,7 +326,7 @@ export function partitionSidebarVisibleSections(input: {
   }).filter(
     (section) =>
       section.id !== "pinned" &&
-      !input.hideEmptyCreatorFilteredGroup(section.category, section.rows.length),
+      !input.hideEmptyOwnerFilteredGroup(section.category, section.rows.length),
   );
   const expandedRows: SidebarRecentSession[] = [];
   const visibleRows: SidebarRecentSession[] = [];
@@ -617,20 +617,20 @@ export function promoteSidebarSessionCreatedOrder(
   return true;
 }
 
-export function applySidebarSessionCreatorFilter(input: {
+export function applySidebarSessionOwnerFilter(input: {
   projected: readonly SidebarRecentSession[];
-  creatorRows: readonly {
+  ownerRows: readonly {
     createdActor?: SessionCreatedActor;
     owner?: { actor: SessionCreatedActor };
   }[];
-  creatorFacet: readonly { id: string; label?: string; avatarUrl?: string }[] | undefined;
-  selectedCreatorId: string | null;
+  ownerFacet: readonly { id: string; label?: string; avatarUrl?: string }[] | undefined;
+  selectedOwnerId: string | null;
   involvingActorId?: string;
 }): {
   rows: SidebarRecentSession[];
-  creatorOptions: readonly SessionOwnerOption[];
+  ownerOptions: readonly SessionOwnerOption[];
   ownershipVisible: boolean;
-  activeCreatorId: string | null;
+  activeOwnerId: string | null;
   involvingMeActive: boolean;
 } {
   const flattened: SidebarRecentSession[] = [];
@@ -642,29 +642,29 @@ export function applySidebarSessionCreatorFilter(input: {
       pending.push(...row.children);
     }
   }
-  const creatorOptions = listSessionOwners([
-    ...(input.creatorFacet ?? []).map((creator) => ({
-      createdActor: { type: "human" as const, ...creator },
+  const ownerOptions = listSessionOwners([
+    ...(input.ownerFacet ?? []).map((owner) => ({
+      owner: { actor: { type: "human" as const, ...owner } },
     })),
     ...flattened,
-    ...input.creatorRows,
+    ...input.ownerRows,
   ]);
   const ownershipVisible =
-    creatorOptions.length >= 2 || flattened.some((row) => (row.participantCount ?? 0) > 0);
+    ownerOptions.length >= 2 || flattened.some((row) => (row.participantCount ?? 0) > 0);
   const involvingMeActive = Boolean(input.involvingActorId);
-  const activeCreatorId = ownershipVisible
-    ? creatorOptions.some((creator) => creator.id === input.selectedCreatorId)
-      ? input.selectedCreatorId
+  const activeOwnerId = ownershipVisible
+    ? ownerOptions.some((owner) => owner.id === input.selectedOwnerId)
+      ? input.selectedOwnerId
       : null
     : null;
-  if (!activeCreatorId) {
+  if (!activeOwnerId) {
     // Involving-me is evaluated by the Gateway against the complete participant table.
     // The bounded display projection cannot safely repeat that predicate client-side.
     return {
       rows: [...input.projected],
-      creatorOptions,
+      ownerOptions,
       ownershipVisible,
-      activeCreatorId,
+      activeOwnerId,
       involvingMeActive,
     };
   }
@@ -673,7 +673,7 @@ export function applySidebarSessionCreatorFilter(input: {
     for (const row of treeRows) {
       const children = filterTree(row.children);
       const ownerId = (row.owner?.actor ?? row.createdActor)?.id;
-      if (activeCreatorId && ownerId === activeCreatorId) {
+      if (ownerId === activeOwnerId) {
         filtered.push({ ...row, children });
       } else {
         for (const child of children) {
@@ -685,9 +685,9 @@ export function applySidebarSessionCreatorFilter(input: {
   };
   return {
     rows: filterTree(input.projected),
-    creatorOptions,
+    ownerOptions,
     ownershipVisible,
-    activeCreatorId,
+    activeOwnerId,
     involvingMeActive,
   };
 }

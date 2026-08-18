@@ -57,12 +57,13 @@ export function visibleSessionCatalogProjection(
 
 export function visibleCatalogHosts(
   hosts: readonly SessionCatalogHost[],
-  creatorId?: string | null,
+  ownerId?: string | null,
 ): SessionCatalogHost[] {
   const visible: SessionCatalogHost[] = [];
   for (const host of hosts) {
+    // Catalog entries have no mutable owner projection, so provenance is their effective owner.
     const sessions = host.sessions.filter(
-      (session) => !creatorId || session.createdActor?.id === creatorId,
+      (session) => !ownerId || session.createdActor?.id === ownerId,
     );
     if (sessions.length > 0) {
       visible.push(sessions.length === host.sessions.length ? host : { ...host, sessions });

@@ -341,7 +341,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
     const instanceId = sharingSnapshot.client?.instanceId;
     const result = this.state?.sessionsResult;
     const showOwnerChip =
-      (result?.creators ?? listSessionOwners(result?.sessions ?? [])).length >= 2 ||
+      (result?.owners ?? listSessionOwners(result?.sessions ?? [])).length >= 2 ||
       (row?.participantCount ?? 0) > 0;
     const renderedOwnerId = showOwnerChip
       ? (row?.owner?.actor ?? row?.createdActor)?.id
@@ -352,7 +352,7 @@ export abstract class ChatPaneHeader extends ChatPaneDiscussion {
     );
     const ownerOptions = listAssignableSessionOwners({
       sessions: result?.sessions ?? (row ? [row] : []),
-      facet: result?.creators,
+      facet: result?.owners,
       agents: this.context.agents.state.agentsList?.agents,
       self: sharingSnapshot.selfUser ?? null,
     });

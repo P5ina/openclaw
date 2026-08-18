@@ -26,7 +26,7 @@ import {
   visibleSessionCatalogProjection,
 } from "./app-sidebar-session-catalogs.ts";
 import {
-  applySidebarSessionCreatorFilter,
+  applySidebarSessionOwnerFilter,
   buildReconciledSidebarZone,
   buildSidebarSessionNavigationState,
   collectPromotedMainChildRows,
@@ -97,7 +97,7 @@ export class AppSidebarSessionNavigationElement extends AppSidebarBase {
       a,
       b,
       sortMode: this.effectiveSessionSortMode(),
-      creators: this.sessionData.sessionsResult?.creators,
+      owners: this.sessionData.sessionsResult?.owners,
       createdOrder: this.sessionData.sessionCreatedOrder,
     });
 
@@ -119,12 +119,12 @@ export class AppSidebarSessionNavigationElement extends AppSidebarBase {
     this.sessionSortMode = storeSidebarSessionSortMode(mode, this.sessionPeopleSortCapability());
   }
 
-  @state() sessionCreatorFilterId: string | null = null;
+  @state() sessionOwnerFilterId: string | null = null;
   @state() sessionInvolvingMeFilterActive = false;
 
-  sessionCreatorOptions: readonly SessionOwnerOption[] = [];
-  protected activeSessionCreatorId: string | null = null;
-  sessionCreatorFilterActive = false;
+  sessionOwnerOptions: readonly SessionOwnerOption[] = [];
+  protected activeSessionOwnerId: string | null = null;
+  sessionOwnerFilterActive = false;
   sessionOwnershipVisible = false;
 
   @state() selectedSessionKeys: ReadonlySet<string> = new Set();
@@ -185,8 +185,8 @@ export class AppSidebarSessionNavigationElement extends AppSidebarBase {
 
   override updated(changedProperties: PropertyValues<this>) {
     super.updated(changedProperties);
-    const selectedId = this.sessionCreatorFilterId;
-    const creators = this.sessionData.sessionsResult?.creators;
+    const selectedId = this.sessionOwnerFilterId;
+    const owners = this.sessionData.sessionsResult?.owners;
     const hasParticipants = this.sessionData.sessionsResult?.sessions.some(
       (session) => (session.participantCount ?? 0) > 0,
     );
@@ -195,12 +195,11 @@ export class AppSidebarSessionNavigationElement extends AppSidebarBase {
     }
     if (
       selectedId &&
-      creators &&
-      ((!hasParticipants && creators.length < 2) ||
-        !creators.some((creator) => creator.id === selectedId))
+      owners &&
+      ((!hasParticipants && owners.length < 2) || !owners.some((owner) => owner.id === selectedId))
     ) {
-      this.sessionCreatorFilterId = null;
-      void this.context?.sessions.setCreatorFilter(null);
+      this.sessionOwnerFilterId = null;
+      void this.context?.sessions.setOwnerFilter(null);
     }
     const activeRouteKey = isSessionRouteId(this.activeRouteId) ? this.getRouteSessionKey() : "";
     if (activeRouteKey !== this.collapsedActiveRouteKey) {
@@ -241,27 +240,27 @@ export class AppSidebarSessionNavigationElement extends AppSidebarBase {
     }
   }
 
-  protected applySessionCreatorFilter(
+  protected applySessionOwnerFilter(
     projected: readonly SidebarRecentSession[],
-    creatorRows: readonly {
+    ownerRows: readonly {
       createdActor?: SessionCreatedActor;
       owner?: { actor: SessionCreatedActor };
     }[] = [],
-    creatorFacet?: readonly { id: string; label?: string }[],
+    ownerFacet?: readonly { id: string; label?: string }[],
   ): SidebarRecentSession[] {
-    const result = applySidebarSessionCreatorFilter({
+    const result = applySidebarSessionOwnerFilter({
       projected,
-      creatorRows,
-      creatorFacet: creatorFacet ?? this.sessionData.sessionsResult?.creators,
-      selectedCreatorId: this.sessionCreatorFilterId,
+      ownerRows,
+      ownerFacet: ownerFacet ?? this.sessionData.sessionsResult?.owners,
+      selectedOwnerId: this.sessionOwnerFilterId,
       involvingActorId: this.sessionInvolvingMeFilterActive
         ? this.sessionDataContext?.gateway.snapshot.selfUser?.id
         : undefined,
     });
-    this.sessionCreatorOptions = result.creatorOptions;
+    this.sessionOwnerOptions = result.ownerOptions;
     this.sessionOwnershipVisible = result.ownershipVisible;
-    this.sessionCreatorFilterActive = result.activeCreatorId !== null;
-    this.activeSessionCreatorId = result.activeCreatorId;
+    this.sessionOwnerFilterActive = result.activeOwnerId !== null;
+    this.activeSessionOwnerId = result.activeOwnerId;
     this.sessionInvolvingMeFilterActive = result.involvingMeActive;
     return result.rows;
   }
@@ -348,8 +347,8 @@ export class AppSidebarSessionNavigationElement extends AppSidebarBase {
           ? []
           : this.sessionData.sessionCatalogs.map((catalog) => catalog.id),
       collapsedSections: this.collapsedSessionSections,
-      hideEmptyCreatorFilteredGroup: (category, rowCount) =>
-        this.sessionCreatorFilterActive && Boolean(category) && rowCount === 0,
+      hideEmptyOwnerFilteredGroup: (category, rowCount) =>
+        this.sessionOwnerFilterActive && Boolean(category) && rowCount === 0,
       visibleSessionLimits: this.sessionData.visibleSessionLimits,
     });
   }
@@ -704,11 +703,11 @@ export class AppSidebarSessionNavigationElement extends AppSidebarBase {
         projected.unshift(navigationState.toSidebarSession(selectedFallback));
       }
     }
-    const creatorFacet =
+    const ownerFacet =
       rows === this.sessionData.sessionsResult?.sessions
-        ? this.sessionData.sessionsResult.creators
+        ? this.sessionData.sessionsResult.owners
         : undefined;
-    return this.applySessionCreatorFilter(projected, rows, creatorFacet);
+    return this.applySessionOwnerFilter(projected, rows, ownerFacet);
   }
 
   /** Canonical main-session key for the selected (or given) agent. */

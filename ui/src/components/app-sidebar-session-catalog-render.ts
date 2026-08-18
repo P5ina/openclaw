@@ -43,7 +43,7 @@ type SessionCatalogGroupsParams = {
   loadingMoreCatalogIds: ReadonlySet<string>;
   projectGrouping: CatalogProjectGrouping;
   liveRows: readonly GatewaySessionRow[];
-  creatorId?: string | null;
+  ownerId?: string | null;
   renderLiveRow: (row: GatewaySessionRow, display: CatalogBackingSessionDisplay) => unknown;
   onToggleSection: (sectionId: string) => void;
   draggingSectionId: string | null;
@@ -54,7 +54,7 @@ type SessionCatalogGroupsParams = {
   onStartSectionDrag: (sectionId: string) => void;
   onFinishSectionDrag: () => void;
   viewMenuOpenCatalogId: string | null;
-  creatorFilterActive: boolean;
+  ownerFilterActive: boolean;
   onOpenViewMenu: (
     catalogId: string,
     trigger: HTMLElement,
@@ -130,7 +130,7 @@ export function renderSessionCatalogGroups(params: SessionCatalogGroupsParams) {
     const collapsed = params.collapsedSections.has(sectionId);
     const hosts = catalog.hosts;
     // Catalog providers own host identity; the sidebar only removes hosts with no visible rows.
-    const visibleHosts = visibleCatalogHosts(hosts, params.creatorId);
+    const visibleHosts = visibleCatalogHosts(hosts, params.ownerId);
     const rows = visibleHosts.flatMap((host) =>
       host.sessions.map((session) => ({ host, session })),
     );
@@ -232,7 +232,7 @@ export function renderSessionCatalogGroups(params: SessionCatalogGroupsParams) {
             </button>
             <button
               type="button"
-              class="sidebar-session-group-actions sidebar-session-sort sidebar-session-catalog-grouping ${params.creatorFilterActive
+              class="sidebar-session-group-actions sidebar-session-sort sidebar-session-catalog-grouping ${params.ownerFilterActive
                 ? "sidebar-session-sort--filtered"
                 : ""}"
               data-session-catalog-view-menu=${catalog.id}
