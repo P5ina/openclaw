@@ -724,6 +724,7 @@ describe("completion source-reply authority", () => {
       description: "Text to send to the current source conversation.",
     });
     expect(tool.description).toContain("Supports actions: send.");
+    expect(tool.description).not.toContain("top-level media");
     expect(tool.description).not.toContain("delete");
   });
 
@@ -1110,12 +1111,16 @@ describe("message tool secret scoping", () => {
     });
     const defaultTool = createMessageTool();
 
+    for (const tool of [scopedTool, explicitTargetTool, defaultTool]) {
+      expect(tool.description).toContain('Attach media/files: action="send" + top-level media');
+    }
     expect(scopedTool.description).toContain('visible reply: action="send" + message');
     expect(getToolProperties(scopedTool).final).toMatchObject({ type: "boolean" });
     expect(scopedTool.description).toContain("target defaults current source");
     expect(scopedTool.description).toContain("Final answer private");
     expect(explicitTargetTool.description).toContain("send needs target");
     expect(explicitTargetTool.description).not.toContain("target defaults current source");
+    expect(explicitTargetTool.description).not.toContain("omit target");
     expect(defaultTool.description).not.toContain('visible reply: action="send" + message');
     expect(getToolProperties(defaultTool)).not.toHaveProperty("final");
   });

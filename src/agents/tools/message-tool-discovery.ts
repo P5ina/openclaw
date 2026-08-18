@@ -288,7 +288,8 @@ export function buildMessageToolDescription(
   sourceReplyDeliveryMode?: SourceReplyDeliveryMode,
   requireExplicitTarget?: boolean,
 ): string {
-  const baseDescription = "Send/manage channel messages.";
+  const baseDescription =
+    'Send/manage channel messages. Attach media/files: action="send" + top-level media; caption in message. Markdown links stay text.';
   if (actions && actions.length > 0) {
     const sortedActions = sortUniqueStrings(actions) as Array<ChannelMessageActionName | "send">;
     return appendMessageToolReadHint(
